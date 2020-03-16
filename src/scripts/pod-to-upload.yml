@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spark-data-pod
+  namespace: hsbc-k8s-deployment
+  labels:
+    platform: ml-platform
+    department: data-science
+    app: spark-data-pod
+spec:
+  containers:
+    - image: eu.gcr.io/marionete-dev/centos-plain:v1
+      name: spark-data-pod
+      volumeMounts:
+        - mountPath: /data
+          name: spark-data-pvc
+  volumes:
+    - name: spark-data-pvc
+      persistentVolumeClaim:
+        claimName: spark-data-pvc

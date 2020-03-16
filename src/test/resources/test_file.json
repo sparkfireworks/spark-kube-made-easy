@@ -1,0 +1,5 @@
+{
+  "sparkAppName": "Spagres Spark on Kubernetes",
+  "withHeader": true,
+  "tableName": "spagres_e2e_02"
+}

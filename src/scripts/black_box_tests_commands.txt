@@ -1,0 +1,52 @@
+# To run Spagres in Kubernetes
+./bin/spark-submit \
+  --master k8s://34.76.251.53:443 \
+  --deploy-mode cluster \
+  --name spagres-test \
+  --class sparkOnK8s.Main \
+  --jars=gs://spark-lib/bigquery/spark-bigquery-latest_2.11.jar \
+  --conf spark.kubernetes.namespace=hsbc-k8s-deployment \
+  --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+  --conf spark.kubernetes.container.image=eu.gcr.io/marionete-dev/spark-gv:v12 \
+  --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-data-pvc.options.claimName=spark-data-pvc \
+  --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-data-pvc.mount.path=/data \
+  --conf spark.kubernetes.driver.volumes.persistentVolumeClaim.spark-data-pvc.mount.readOnly=true \
+  --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-data-pvc.options.claimName=spark-data-pvc \
+  --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-data-pvc.mount.readOnly=true \
+  --conf spark.kubernetes.executor.volumes.persistentVolumeClaim.spark-data-pvc.mount.path=/data \
+  /data/spagres-3.3-SNAPSHOT-allinone.jar \
+    -n "My Spagres App" \
+    -s /data/test_data_file.csv \
+    -j /data/spagres_config.json \
+    -t /data/t_e2e_01_end2end_identity_spagres.json\
+    -c temporaryGcsBucket=hsbc-ikarus-dataproc \
+    -i 12345678901234567
+
+# To run Spagres in a Hadoop cluster with files in the computer issuing the spark-submit command
+gcloud dataproc jobs submit spark \
+  --cluster hsbc-spark-tests \
+  --class sparkOnK8s.Main \
+  --files=/Volumes/Work/projects/spagres/src/test/resources/spagres_config.json,/Volumes/Work/projects/spagres/src/test/resources/test_database_configuration_file.json,/Volumes/Work/projects/spagres/src/test/resources/t_e2e_01_end2end_identity_spagres.json \
+  --jars=gs://hsbc-ikarus-dataproc/spagres-3.3-SNAPSHOT-allinone.jar,gs://spark-lib/bigquery/spark-bigquery-latest_2.11.jar \
+  --region=europe-west1 \
+  -- \
+    -n "My Spagres App" \
+    -s gs://hsbc-ikarus-dataproc/test_data_file.csv \
+    -j spagres_config.json \
+    -t t_e2e_01_end2end_identity_spagres.json \
+    -c temporaryGcsBucket=hsbc-ikarus-dataproc \
+    -i 12345678901234567
+
+# To run Spagres in a Hadoop cluster with files in GCS
+gcloud dataproc jobs submit spark \
+  --cluster hsbc-spark-tests \
+  --class sparkOnK8s.Main \
+  --jars=gs://hsbc-ikarus-dataproc/spagres-3.4-SNAPSHOT-allinone.jar,gs://spark-lib/bigquery/spark-bigquery-latest_2.11.jar \
+  --region=europe-west1 \
+  -- \
+    -n "My Spagres App" \
+    -s gs://hsbc-ikarus-dataproc/test_data_file.csv \
+    -j gs://hsbc-ikarus-dataproc/spagres_config.json \
+    -t gs://hsbc-ikarus-dataproc/t_e2e_01_end2end_identity_spagres.json \
+    -c temporaryGcsBucket=hsbc-ikarus-dataproc \
+    -i 12345678901234567
