@@ -1,58 +1,46 @@
 package sparkOnK8s
 
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
-
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.commons.io.FilenameUtils
 import org.apache.spark.SparkFiles
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import sparkOnK8s.SparkOnK8sJsonSupport.{SpagresConfiguration, convertConfigFileContentsToObject}
+import sparkOnK8s.SparkOnK8sJsonSupport.{SparkOnK8sConfiguration, convertConfigFileContentsToObject}
 import sparkOnK8s.argumentValidator.ArgumentParser
-import sparkOnK8s.core.CoreSpark.{addColumnWithConstantString, getSchemaFromTableBigQuery, insertIntoBigQueryTable, readSourceFile}
+import sparkOnK8s.core.CoreSpark.{getSchemaFromTableBigQuery, insertIntoBigQueryTable, readSourceFile}
 import sparkOnK8s.endtoend.EndToEndTest
 
-import scala.util.Random
-
 object Main extends App with StrictLogging {
-  logger.info("Starting Spagres Application")
+  logger.info("Starting SparkOnK8s Application")
   MainBody(args = args).run
-  logger.info("Successfully terminated Spagres Application")
+  logger.info("Successfully terminated SparkOnK8s Application")
 }
 
 case class MainBody(endToEndTestConfigurationFilePath: String,
-                    snapshotId: String,
                     sourceToProcess: String,
-                    spagresConfiguration: SpagresConfiguration,
+                    sparkOnK8sConfiguration: SparkOnK8sConfiguration,
                     sparkSession: SparkSession) extends StrictLogging {
 
   def run: Unit = {
     //Fail fast -> if destination table does not exists the program will stop
     val tableSchema: Option[StructType] = getSchemaFromTableBigQuery(
-      columnsToDrop = Seq(this.snapshotId), //It is necessary to drop this column because the snapshot_id is not included in data file
+      columnsToDrop = Seq(),
       sparkSession = sparkSession,
-      table = spagresConfiguration.tableName
+      table = sparkOnK8sConfiguration.tableName
     )
 
     tableSchema match {
       case Some(x) =>
-        logger.info(s"Table ${spagresConfiguration.tableName} exists, reading values from source file ${sourceToProcess}")
+        logger.info(s"Table ${sparkOnK8sConfiguration.tableName} exists, reading values from source file ${sourceToProcess}")
         val sourceDataFrame: DataFrame = readSourceFile(
           repartitionFactor = None,
           schema = tableSchema.get,
           sourceFilePath = sourceToProcess,
           sparkSession = sparkSession,
-          withHeader = Some(spagresConfiguration.withHeader)
+          withHeader = Some(sparkOnK8sConfiguration.withHeader)
         )
 
-        val dfWithSnapshotId: DataFrame = addColumnWithConstantString(
-          columnName = spagresConfiguration.snapshotIdColumnName,
-          df = sourceDataFrame,
-          value = this.snapshotId
-        )
-
-        insertIntoBigQueryTable(dataFrame = dfWithSnapshotId, table = spagresConfiguration.tableName)
+        insertIntoBigQueryTable(dataFrame = sourceDataFrame, table = sparkOnK8sConfiguration.tableName)
 
         endToEndTestConfigurationFilePath.isEmpty match {
           case true =>
@@ -63,13 +51,13 @@ case class MainBody(endToEndTestConfigurationFilePath: String,
             EndToEndTest.checkHash(
               endToEndTestConfigurationFilePath = endToEndTestConfigurationFilePath,
               sparkSession = sparkSession,
-              table = spagresConfiguration.tableName
+              table = sparkOnK8sConfiguration.tableName
             )
         }
         sparkSession.stop()
 
       case None =>
-        logger.error(s"Error when getting schema from the table ${spagresConfiguration.tableName}. Exiting.")
+        logger.error(s"Error when getting schema from the table ${sparkOnK8sConfiguration.tableName}. Exiting.")
         sparkSession.stop()
         sys.exit(1)
     }
@@ -90,13 +78,13 @@ object MainBody extends StrictLogging {
       sparkAppName = arguments.sparkAppName
     )
 
-    val spagresConfigFilePath: String = addFileToSparkContext(
-      filePath = arguments.spagresConfigurationFile,
+    val sparkOnK8sConfigFilePath: String = addFileToSparkContext(
+      filePath = arguments.sparkOnK8sConfigurationFile,
       sparkSession = sparkSession
     )
 
-    val spagresConfiguration: SpagresConfiguration = convertConfigFileContentsToObject(
-      configurationFilePath = spagresConfigFilePath)
+    val sparkOnK8sConfiguration: SparkOnK8sConfiguration = convertConfigFileContentsToObject(
+      configurationFilePath = sparkOnK8sConfigFilePath)
 
     val endToEndTestConfigFilePath: String =
       if (arguments.endToEndTestConfigurationFilePath.isEmpty) {
@@ -109,40 +97,12 @@ object MainBody extends StrictLogging {
         )
       }
 
-    val snapshotId: String = arguments.snapshotId match {
-      case x if x.isEmpty => generateSnapshotId()
-      case x => x
-    }
-
     new MainBody(
       endToEndTestConfigurationFilePath = endToEndTestConfigFilePath,
-      snapshotId = snapshotId,
       sourceToProcess = arguments.sourceToProcess,
-      spagresConfiguration = spagresConfiguration,
+      sparkOnK8sConfiguration = sparkOnK8sConfiguration,
       sparkSession = sparkSession
     )
-  }
-
-  def generateSnapshotId(when: Date = Calendar.getInstance().getTime(),
-                         append: String = {
-                           val r: Random.type = scala.util.Random; { r.nextInt(900) + 100 }.toString
-                         }): String = {
-    // create the date/time formatters
-    val yearFormat: SimpleDateFormat = new SimpleDateFormat("YYYY")
-    val monthFormat: SimpleDateFormat = new SimpleDateFormat("MM")
-    val dayFormat: SimpleDateFormat = new SimpleDateFormat("dd")
-    val minuteFormat: SimpleDateFormat = new SimpleDateFormat("mm")
-    val hourFormat: SimpleDateFormat = new SimpleDateFormat("hh")
-    val secondFormat: SimpleDateFormat = new SimpleDateFormat("ss")
-
-    val currentYear: String = yearFormat.format(when)
-    val currentMonth: String = monthFormat.format(when)
-    val currentDay: String = dayFormat.format(when)
-    val currentHour: String = hourFormat.format(when)
-    val currentMinute: String = minuteFormat.format(when)
-    val currentsecond: String = secondFormat.format(when)
-
-    currentYear ++ currentMonth ++ currentDay ++ currentHour ++ currentMinute ++ currentsecond ++ append
   }
 
   /**
@@ -150,8 +110,8 @@ object MainBody extends StrictLogging {
    *
    * Should the configurations be empty, the default spark session will be returned.
    *
-   * @param configs provided configurations.
-   * @param sparkAppName.
+   * @param configs      provided configurations.
+   * @param sparkAppName .
    * @return a configured spark session.
    */
   def createSparkSession(configs: Map[String, String], sparkAppName: String): SparkSession = {

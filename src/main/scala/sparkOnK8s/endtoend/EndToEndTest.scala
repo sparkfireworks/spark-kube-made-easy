@@ -11,6 +11,7 @@ object EndToEndTest extends StrictLogging {
                 sparkSession: SparkSession,
                 table: String
                ): Unit = {
+
     logger.info("Starting check Spark end to end results' data frame")
     val testProjectData: TestProjectData = convertEndToEndTestConfigFileContentsToObject(
       configurationFilePath = endToEndTestConfigurationFilePath
