@@ -9,27 +9,25 @@ import scopt.OptionParser
  *
  * @param configs                           Optional Spark configurations.
  * @param endToEndTestConfigurationFilePath The path to the end to end test.
- * @param snapshotId                        snapshotId is the ID to append to every value imported from CSV files.
  * @param sourceToProcess                   File or or directory to process.
- * @param spagresConfigurationFile          The path to the JSON file with the configuration.
- * @param sparkAppName                      Spagres Spark application name.
+ * @param sparkOnK8sConfigurationFile       The path to the JSON file with the configuration.
+ * @param sparkAppName                      SparkOnK8s Spark application name.
  */
 case class ArgumentParser(configs: Map[String, String] = Map(),
                           endToEndTestConfigurationFilePath: String = "",
-                          snapshotId: String = "",
                           sourceToProcess: String = "",
-                          spagresConfigurationFile: String = "",
-                          sparkAppName: String = "Spagres Spark")
+                          sparkOnK8sConfigurationFile: String = "",
+                          sparkAppName: String = "SparkOnK8s Spark")
 
 /** Object that parses the arguments received. */
 object ArgumentParser {
 
   val parser: OptionParser[ArgumentParser] =
     new scopt.OptionParser[ArgumentParser](programName = "Spark") {
-      head(xs = "Spagres")
+      head(xs = "SparkOnK8s")
 
       opt[String]('n', name = "sparkAppName")
-        .valueName("Spagres Spark Application Name")
+        .valueName("SparkOnK8s Spark Application Name")
         .optional()
         .action((x, c) => c.copy(sparkAppName = x))
         .text("Spark application name.")
@@ -49,7 +47,7 @@ object ArgumentParser {
       opt[String]('j', name = "configurationFile")
         .valueName("configuration_file.json")
         .required()
-        .action((x, c) => c.copy(spagresConfigurationFile = x))
+        .action((x, c) => c.copy(sparkOnK8sConfigurationFile = x))
         .validate(x => if (validateConfigFileExistance(value = x)) {
           success
         } else {
@@ -72,13 +70,6 @@ object ArgumentParser {
           failure(msg = "End 2 end test JSON file does not exits")
         })
         .text("endToEndConfigurationFile")
-
-
-      opt[String]('i', name = "snapshotId")
-        .valueName("SnapshotID")
-        .optional()
-        .action((x, c) => c.copy(snapshotId = x))
-        .text("Snapshot ID for import")
     }
 
   /** Method to check if the json file received exists.

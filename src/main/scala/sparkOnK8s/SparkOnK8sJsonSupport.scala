@@ -8,28 +8,27 @@ object SparkOnK8sJsonSupport extends DefaultJsonProtocol with StrictLogging {
 
   import spray.json._
 
-  implicit val SpagresConfigurationFormat: RootJsonFormat[SpagresConfiguration] = jsonFormat3(SpagresConfiguration)
+  implicit val SparkOnK8sConfigurationFormat: RootJsonFormat[SparkOnK8sConfiguration] = jsonFormat2(SparkOnK8sConfiguration)
   implicit val TestProjectDataFormat: RootJsonFormat[TestProjectData] = jsonFormat3(TestProjectData)
 
-  case class SpagresConfiguration(tableName: String,
-                                  snapshotIdColumnName: String = "snapshot_id",
-                                  withHeader: Boolean)
+  case class SparkOnK8sConfiguration(tableName: String,
+                                     withHeader: Boolean)
 
   case class TestProjectData(columns_order: Array[String],
                              data_frame_hash: Int,
                              order_by_columns: List[String])
 
-  /** Method to convert the contents of a configuration file into an object of type SpagresConfiguration
+  /** Method to convert the contents of a configuration file into an object of type SparkOnK8sConfiguration
    *
    * @param configurationFilePath The file path of the configuration.
-   * @return Some(SpagresConfiguration) if the file path exists or None if not.
+   * @return Some(SparkOnK8sConfiguration) if the file path exists or None if not.
    */
-  def convertConfigFileContentsToObject(configurationFilePath: String): SpagresConfiguration = {
+  def convertConfigFileContentsToObject(configurationFilePath: String): SparkOnK8sConfiguration = {
     logger.info(s"Converting config file - $configurationFilePath - to object")
     getFileContents(filePath = configurationFilePath)
       .get
       .parseJson
-      .convertTo[SpagresConfiguration]
+      .convertTo[SparkOnK8sConfiguration]
   }
 
   /** Method to convert the contents of a configuration file into an object of type TestProjectData

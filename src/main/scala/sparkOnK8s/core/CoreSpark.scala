@@ -9,18 +9,6 @@ import scala.util.{Failure, Success, Try}
 
 object CoreSpark extends StrictLogging {
 
-  /** Method to add a column with a string
-   *
-   * @param columnName column to be added to data frame
-   * @param df         data frame to modify
-   * @param value      value to put in new column
-   * @return A new data frame with a new constant column. If the column already exist the initial data frame is returned
-   */
-  def addColumnWithConstantString(columnName: String, df: DataFrame, value: String): DataFrame = {
-    logger.info(s"Writing column ${columnName} to dataframe with value ${value}")
-    df.withColumn(colName = columnName, col = lit(value))
-  }
-
   /** Method to drop columns of a DataFrame
    *
    * @param dataFrame DataFrame to drop columns of.
