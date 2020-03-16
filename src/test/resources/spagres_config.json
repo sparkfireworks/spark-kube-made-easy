@@ -1,0 +1,5 @@
+{
+  "withHeader": true,
+  "snapshotIdColumnName": "snapshot_id",
+  "tableName": "test_k8s_spark.spagres_e2e_02"
+}
